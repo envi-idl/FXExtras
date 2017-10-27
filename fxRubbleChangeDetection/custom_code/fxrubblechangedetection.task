@@ -1,0 +1,84 @@
+{
+    "name": "FXRubbleChangeDetection",
+    "version": "5.3",
+    "baseClass": "ENVITaskFromProcedure",
+    "routine": "FXRubbleChangeDetection",
+    "displayName": "FX Rubble Change Detection",
+    "description": "Feature extraction based change detection to try and identify regions that have turned to rubble. This has been fine-tuned for tornado damage where houses have been turned to rubble.",
+    "parameters": [
+        {
+            "name": "PERFORM_INTERSECT",
+            "displayName": "Perform Intersect",
+            "description": "If set, the ImageIntersection task will be ran on the two input rasters if they do not have the same dimensions. If not set, and the images do not have the same dimensions, then a message will be thrown and the algorithm will not proceed.",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "boolean",
+            "defaultValue": false
+        },{
+            "name": "MASK_VEGETATION_AND_WATER",
+            "displayName": "Mask Vegetation and Water",
+            "description": "If set, vegetation and water will be masked using an approximate mask generated from an NDVI. If an error occurs while masking, then the algorithm will ignore the issues and continue processing.",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "boolean",
+            "defaultValue": false
+        },{
+            "name": "MIN_SIZE",
+            "displayName": "Min Size (m^2)",
+            "description": "Minimum size allowed for regions from the feature extraction step. Making this larger helps identify buildings and parking lots..",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "double",
+            "min": 0,
+            "defaultValue": 0
+        },{
+            "name": "SEGMENT_VALUE",
+            "displayName": "Segment Value",
+            "description": "Specify the scale level to delineate features of interest with the FXSegmentation task.",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "float",
+            "min": 0,
+            "max": 100,
+            "defaultValue": 50.0
+        },{
+            "name": "MERGE_VALUE",
+            "displayName": "Merge Value",
+            "description": "Specify the merge level to combine segments with similar colors for the FXSegmentation task.",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "float",
+            "min": 0,
+            "max": 100,
+            "defaultValue": 0.0
+        },{            
+            "name": "SHADOW_THRESHOLD",
+            "displayName": "Shadow Threshold",
+            "description": "Specify the pixel value where anything less is considered to be in shadow. This parameter is useful for masking out regions where false change is detected around buildings because of different viewing angles.",
+            "direction": "input",
+            "parameterType": "optional",
+            "dataType": "float"
+        },{
+            "name": "TIME1_RASTER",
+            "displayName": "Time1 Raster",
+            "description": "Specify the pre-event raster. .",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        },{
+            "name": "TIME2_RASTER",
+            "displayName": "Time2 Raster",
+            "description": "Default parameter description from the IDL Package Manager.",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        },{
+            "name": "OUTPUT_RASTER",
+            "displayName": "Output Raster",
+            "description": "A reference to the output raster.",
+            "direction": "output",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        }
+    ]
+}

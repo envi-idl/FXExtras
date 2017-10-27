@@ -1,0 +1,44 @@
+{
+    "name": "GetFXRasterStats",
+    "version": "5.3",
+    "baseClass": "ENVITaskFromProcedure",
+    "routine": "getfxrasterstats",
+    "displayName": "GetFXRasterStats",
+    "description": "Taskt that will extract raster-based information from any segmented image generated with the FXSegmentation task.",
+    "parameters": [
+        {
+            "name": "BUFFER",
+            "displayName": "Buffer",
+            "description": "Specify the buffer needed to extract data for each tile. The buffer oonly needs to be used when tiling artifacts might be present for the raster being used for statistics. An example of when this might be used is if you have a band math raster that is the sobel filter: you will need a one pixel buffer to remove the tiling artifacts.",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "long",
+            "min": 0,
+            "defaultValue": 0
+        },
+        {
+            "name": "FX_RASTER",
+            "displayName": "Fx Raster",
+            "description": "Specify the FX Segmentation raster that defines the regions to process.",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        },
+        {
+            "name": "OUTPUT_STATS",
+            "displayName": "Output Stats",
+            "description": "An orderedhash that contains the statistics information gathered from our source rasters.",
+            "direction": "output",
+            "parameterType": "required",
+            "dataType": "hash"
+        },
+        {
+            "name": "STATS_RASTER",
+            "displayName": "Stats Raster",
+            "description": "Specify the raster that you would like to collect statistics on for the corresponding FX Segments. This should have the same extent and dimensions as the FX Raster. An error will be thrown if this is not the case.",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        }
+    ]
+}

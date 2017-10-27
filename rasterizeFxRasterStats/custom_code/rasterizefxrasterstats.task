@@ -1,0 +1,82 @@
+{
+    "name": "RasterizeFXRasterStats",
+    "version": "5.3",
+    "baseClass": "ENVITaskFromProcedure",
+    "routine": "rasterizeFxRasterStats",
+    "displayName": "Rasterize FX Raster Stats",
+    "description": "Custom task definition created by the IDL package manager",
+    "parameters": [
+        {
+            "name": "FX_RASTER",
+            "displayName": "Fx Raster",
+            "description": "Default parameter description from the IDL Package Manager.",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        },
+        {
+            "name": "OUTPUT_MASK_RASTER",
+            "displayName": "Mask Raster",
+            "description": "The output raster that contains a 1/0 for processing. Mask is generated from the VALID_DATA array in the statistics.",
+            "direction": "output",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        },
+        {
+            "name": "OUTPUT_MIN_RASTER",
+            "displayName": "Output Min Raster",
+            "description": "The output raster that contains the spectral segment minimums.",
+            "direction": "output",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        },
+        {
+            "name": "OUTPUT_MAX_RASTER",
+            "displayName": "Output Max Raster",
+            "description": "The output raster that contains the spectral segment maximums.",
+            "direction": "output",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        },
+        {
+            "name": "OUTPUT_MEAN_RASTER",
+            "displayName": "Output Mean Raster",
+            "description": "The output raster that contains the spectral segment means.",
+            "direction": "output",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        },
+        {
+            "name": "OUTPUT_TOTAL_RASTER",
+            "displayName": "Output Total Raster",
+            "description": "The output raster that contains the spectral segment totals.",
+            "direction": "output",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        },
+        {
+            "name": "OUTPUT_COUNT_RASTER",
+            "displayName": "Output Count Raster",
+            "description": "The output raster that contains the counts for how many pixels belong to each segment.",
+            "direction": "output",
+            "parameterType": "required",
+            "dataType": "ENVIRASTER"
+        },
+        {
+            "name": "RASTERIZE_STATS",
+            "displayName": "Rasterize Stats",
+            "description": "Specify a string array of the statistics that you would like to rasterize. Options are: min, max, mean, total, count.",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "string[*]"
+        },
+        {
+            "name": "INPUT_STATS",
+            "displayName": "Input Stats",
+            "description": "Specify the statistics hash that you would like to rasterize.",
+            "direction": "input",
+            "parameterType": "required",
+            "dataType": "hash"
+        }
+    ]
+}
