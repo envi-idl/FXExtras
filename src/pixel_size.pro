@@ -19,6 +19,7 @@
 ;-
 function pixel_size, raster
   compile_opt idl2
+  on_error, 2
 
   ;make sure ENVI has started
   e = envi(/current)

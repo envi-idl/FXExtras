@@ -30,6 +30,7 @@ pro getFxRasterStats,$
   BUFFER = buffer,$
   FX_RASTER = fx_raster,$
   STATS_RASTER = stats_raster,$
+  TILE_SIZE = tile_size,$
   OUTPUT_STATS = output_stats
   compile_opt idl2
 
@@ -40,15 +41,19 @@ pro getFxRasterStats,$
   if (fx_raster.NBANDS ne 1) then begin
     message, 'FX_RASTER does not have one band, required!'
   endif
-  if ~(stats_raster.NBANDS ge 1) then begin
-    message, 'STATS_RASTER does not have one or more bands, required!'
+  
+  ;check if we have no stats raster
+  fake_stats = 0
+  if (stats_raster eq !NULL) then begin
+    stats_raster = fx_raster
+    fake_stats = 1
   endif
   
   ;make sure the dimensions are correct
   dims1 = [fx_raster.NCOLUMNS, fx_raster.NROWS]
   dims2 = [stats_raster.NCOLUMNS, stats_raster.NROWS]
   
-  if ~array_equal(dims1, dims2) then begin
+  if (stats_raster ne !NULL) then if ~array_equal(dims1, dims2) then begin
     message, 'FX_RASTER adn STATS_RASTER do not have the same spatial dimensions. requried!'
   endif
   
@@ -64,7 +69,7 @@ pro getFxRasterStats,$
     minSize = 0
   endelse
   
-  ;check if we specified our minimum size
+  ;check if we specified our maximum size
   if keyword_set(max_size) then begin
     if (fx_raster.SPATIALREF ne !NULL) then begin
       maxSize = ceil(max_size/((pixel_size(fx_raster))[0]^2))
@@ -80,7 +85,7 @@ pro getFxRasterStats,$
     buffer = 0
   endif
   
-  ;get initial stats
+  ;get initial stats for array preallocation
   stats = ENVIRasterStatistics(fx_raster)
   
   ;get the number of bands for our stats raster
@@ -95,9 +100,28 @@ pro getFxRasterStats,$
   maxs = make_array(stats.MAX, nBands, TYPE = 5, VALUE = -1e308)
   means = make_array(stats.MAX, nBands, TYPE = 5)
   counts = ulon64arr(stats.MAX)
+  
+  ;init arrays to hold the extents of each segment
+  xmin = ulon64arr(stats.MAX) + dims[0]
+  xmax = ulon64arr(stats.MAX)
+  ymin = ulon64arr(stats.MAX) + dims[1]
+  ymax = ulon64arr(stats.MAX)
+  
+  ;init arrays to hold which tile we want to pull our segment from
+  hasTile = bytarr(stats.MAX)
+  tileNumber = lonarr(stats.MAX)
+
+  ;save the tile size
+  if (tile_size ne !NULL) then begin
+    tSize = 1024
+    tile_size = 1024
+  endif else begin
+    tSize = tile_size
+  endelse
 
   ;make our tiles
   createBetterTileIterator,$
+    TILE_SIZE = [tSize, tSize],$
     TILE_BUFFER = buffer,$    
     INPUT_RASTER = fx_raster,$
     OUTPUT_TILE_SUB_RECTS = tile_sub_rects,$
@@ -112,26 +136,33 @@ pro getFxRasterStats,$
     fxDatSub = fx_raster.getData(PIXEL_STATE = ps1, SUB_RECT = sub)
 
     ;get the raster data
-    rasterDat = stats_raster.getData(PIXEL_STATE = ps2, SUB_RECT = sub, INTERLEAVE = 'BSQ')
+    if ~keyword_set(fake_stats) then begin
+      rasterDat = stats_raster.getData(PIXEL_STATE = ps2, SUB_RECT = sub, INTERLEAVE = 'BSQ')
+    endif
+    
+    ;get the extent of our tile that we need to process
+    tileSub = tile_sub_rects[z]
+    
+    ; get the start of our tile
+    tile_start = [sub[0] + tileSub[0], sub[1] + tileSub[1]]
     
     ;check if we have a buffer and need to subset our data
     if (buffer gt 0) then begin
-      ;get the extent of our tile that we need to process
-      tileSub = tile_sub_rects[z]
-
-      ;subst our datasets      
+      ;subset our datasets      
       fxDatSub = fxDatSub[tileSub[0]:tileSub[2], tileSub[1]:tileSub[3],*]
       ps1 = ps1[tileSub[0]:tileSub[2], tileSub[1]:tileSub[3],*]
-      rasterDat = rasterDat[tileSub[0]:tileSub[2], tileSub[1]:tileSub[3],*]
-      ps2 = ps2[tileSub[0]:tileSub[2], tileSub[1]:tileSub[3],*]
+      if ~keyword_set(fake_stats) then rasterDat = rasterDat[tileSub[0]:tileSub[2], tileSub[1]:tileSub[3],*]
+      if ~keyword_set(fake_stats) then ps2 = ps2[tileSub[0]:tileSub[2], tileSub[1]:tileSub[3],*]
     endif
     
-    ;save each band of our dataset
-    for j=0, nBands-1 do bPtrs[j] = ptr_new(rasterDat[*,*,j])
-    
-    ;correct the second pixel state if needed to be 1D array that ignores all pixels if single one is turned off
-    if (nBands gt 1) then begin
-      ps2 = total(ps2, 3, /INTEGER)
+    if ~keyword_set(fake_stats) then begin
+      ;save each band of our dataset
+      for j=0, nBands-1 do bPtrs[j] = ptr_new(rasterDat[*,*,j])
+
+      ;correct the second pixel state if needed to be 1D array that ignores all pixels if single one is turned off
+      if (nBands gt 1) then begin
+        ps2 = total(ps2, 3, /INTEGER)
+      endif
     endif
     
     ;skip if no valid pixels
@@ -158,29 +189,48 @@ pro getFxRasterStats,$
         
         ;get the indices
         idxSeg = R[R[i] : R[i+1]-1]
+        
+        ;get absolute pixel positions from the top left
+        xSeg = tile_start[0] + (idxSeg mod (tileSub[2] - tileSub[0] + 1))
+        ySeg = tile_start[1] + (idxSeg/(tileSub[2] - tileSub[0] + 1))
+        
+        ;save the extents of our segment
+        xmin[vals[i]] <= min(xSeg)
+        xmax[vals[i]] >= max(xSeg)
+        ymin[vals[i]] <= min(ySeg)
+        ymax[vals[i]] >= max(ySeg)
+        
+        ;save tile
+        if ~hasTile[vals[i]] then begin
+          hasTile[vals[i]] = 1
+          tileNumber[vals[i]] = z
+        endif
+        
+        ;only continue if we have actual data
+        if ~keyword_set(fake_stats) then begin
+          ;make sure that we have have a valid pixel state in the FX raster AND the raster we are getting data from
+          if (max(ps1[idxSeg]) gt 0) OR (max(ps2[idxSeg]) gt 0) then begin
+            validData[vals[i]] = 0b
+            continue
+          endif else begin
+            ;valid data, so set our flag to 1 in case it was turned off for another tile
+            validData[vals[i]] = 1b
+          endelse
 
-        ;make sure that we have have a valid pixel state in the FX raster AND the raster we are getting data from
-        if (max(ps1[idxSeg]) gt 0) OR (max(ps2[idxSeg]) gt 0) then begin
-          validData[vals[i]] = 0b
-          continue
-        endif else begin
-          ;valid data, so set our flag to 1 in case it was turned off for another tile
-          validData[vals[i]] = 1b
-        endelse
+          ;get the OK parts of our data
+          idxOk = where(~ps2[idxSeg], countOk)
 
-        ;get the OK parts of our data
-        idxOk = where(~ps2[idxSeg], countOk)
+          ;loop over each band
+          for j=0, nBands-1 do begin
+            ;subset to our FX segment
+            rasterDatSeg = (*bPtrs[j])[idxSeg[idxOk]]
 
-        ;loop over each band
-        for j=0, nBands-1 do begin
-          ;subset to our FX segment
-          rasterDatSeg = (*bPtrs[j])[idxSeg[idxOk]]
-          
-          ;update our stats
-          totals[vals[i], j] += total(rasterDatSeg, /NAN)
-          mins[vals[i], j] <= min(rasterDatSeg, /NAN)
-          maxs[vals[i], j] >= max(rasterDatSeg, /NAN)
-        endfor
+            ;update our stats
+            totals[vals[i], j] += total(rasterDatSeg, /NAN)
+            mins[vals[i], j] <= min(rasterDatSeg, /NAN)
+            maxs[vals[i], j] >= max(rasterDatSeg, /NAN)
+          endfor
+        endif
       endforeach
     endif
   endforeach
@@ -194,11 +244,16 @@ pro getFxRasterStats,$
   
   ;build a dictionary to hold the information
   output_stats = orderedhash()
-  output_stats['MEANS']      = means
-  output_stats['TOTALS']     = temporary(reform(totals))
-  output_stats['COUNTS']     = temporary(counts)
-  output_stats['MINS']       = temporary(mins)
-  output_stats['MAXS']       = temporary(maxs)
-  output_stats['VALID_DATA'] = temporary(validData)
-  output_stats['RASTER'] = stats_raster
+  output_stats['MEANS']       = means
+  output_stats['TOTALS']      = temporary(reform(totals))
+  output_stats['COUNTS']      = temporary(counts)
+  output_stats['MINS']        = temporary(mins)
+  output_stats['MAXS']        = temporary(maxs)
+  output_stats['XMIN']        = temporary(xmin)
+  output_stats['XMAX']        = temporary(xmax)
+  output_stats['YMIN']        = temporary(ymin)
+  output_stats['YMAX']        = temporary(ymax)
+  output_stats['TILE_NUMBER'] = temporary(tileNumber)
+  output_stats['VALID_DATA']  = temporary(validData)
+  output_stats['RASTER']      = stats_raster
 end
