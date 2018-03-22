@@ -147,7 +147,7 @@ pro rasterizeFxRasterStats,$
   maskRaster = ENVIRaster(NCOLUMNS = dims[0], NROWS = dims[1], NBANDS = 1, DATA_TYPE = 'byte', SPATIALREF = fx_raster.SPATIALREF, METADATA = meta, URI = output_mask_raster_uri)
 
   ;make our tiles
-  createBetterTileIterator,$
+  createAwesomeTileIterator,$
     INPUT_RASTER = fx_raster,$
     OUTPUT_SUB_RECTS = sub_rects
 

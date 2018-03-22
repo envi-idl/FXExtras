@@ -120,9 +120,9 @@ pro getFxRasterStats,$
   endelse
 
   ;make our tiles
-  createBetterTileIterator,$
+  createAwesomeTileIterator,$
     TILE_SIZE = [tSize, tSize],$
-    TILE_BUFFER = buffer,$    
+    TILE_BUFFER = buffer,$
     INPUT_RASTER = fx_raster,$
     OUTPUT_TILE_SUB_RECTS = tile_sub_rects,$
     OUTPUT_SUB_RECTS = sub_rects
